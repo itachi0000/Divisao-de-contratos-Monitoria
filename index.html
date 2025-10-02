@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mapa de Divisão de Contratos</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#f9c74f}
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{margin:0;background:linear-gradient(180deg,#071020 0%, #0f1724 100%);color:#e6eef6;padding:28px}
+    .app{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+    .input,select,button{background:var(--card);border:1px solid rgba(255,255,255,0.04);color:inherit;padding:8px 10px;border-radius:8px}
+    .input{min-width:220px}
+    .btn-primary{background:linear-gradient(90deg,#2e8de4,#7bb8ff);color:#032036;border:none}
+    .meta{margin-left:auto;color:var(--muted);font-size:13px}
+    .legend{display:flex;gap:8px;align-items:center}
+    .legend .item{display:flex;gap:8px;align-items:center;padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:8px}
+    .color-box{width:14px;height:14px;border-radius:4px}
+    main{margin-top:18px}
+    .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .stat{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:10px;border-radius:8px;min-width:140px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:8px}
+    .card .title{font-weight:600}
+    .card .monitor{font-size:13px;color:var(--muted)}
+    .toolbar{display:flex;gap:8px;align-items:center}
+    .small{font-size:12px;padding:6px 8px}
+    .list-view .grid{display:block}
+    .list-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);margin-bottom:8px}
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+    @media (max-width:560px){.controls{flex-direction:column}.meta{margin-left:0}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Mapa de Divisão de Contratos</h1>
+        <div style="color:var(--muted);font-size:13px">Visualização interativa dos projetos e seus monitores</div>
+      </div>
+
+      <div class="meta" id="total-info">Projetos: 0 • Monitores: 0</div>
+    </header>
+
+    <section class="controls">
+      <input id="search" class="input" placeholder="Pesquisar projeto ou monitor (ex: Amparo)" />
+
+      <select id="filterMonitor" class="input small">
+        <option value="">Filtrar por monitor — Todos</option>
+      </select>
+
+      <div class="toolbar">
+        <button id="toggleView" class="input small">Alternar vizualização</button>
+        <button id="exportCSV" class="input small btn-primary">Exportar CSV</button>
+      </div>
+
+      <div style="margin-left:auto" class="legend" id="legend"></div>
+    </section>
+
+    <main>
+      <div class="stats">
+        <div class="stat">Projetos totais: <strong id="statTotal">0</strong></div>
+        <div class="stat">Monitores únicos: <strong id="statMonitors">0</strong></div>
+        <div class="stat">Maior monitor (projetos): <strong id="statTopMonitor">-</strong></div>
+      </div>
+
+      <div id="view" class="grid"></div>
+
+    </main>
+
+    <footer>
+      Dicas: use a pesquisa para localizar rapidamente. Filtre por monitor para ver seus projetos. Exporte para CSV quando precisar compartilhar.
+    </footer>
+  </div>
+
+  <script>
+    const data = [
+      {project: 'FE-Amparo', monitor: 'Gabriel'},
+      {project: 'FE-Arujá', monitor: 'Alberto'},
+      {project: 'FE-Bertioga', monitor: 'Alberto'},
+      {project: 'FE-Boituva', monitor: 'Alberto'},
+      {project: 'FE-Cajamar', monitor: 'Gabriel'},
+      {project: 'FE-Cordeirópolis', monitor: 'Gabriel'},
+      {project: 'FE-Cubatão', monitor: 'Mateus'},
+      {project: 'FE-Diadema', monitor: 'Mateus'},
+      {project: 'FE-EMBU', monitor: 'Mateus'},
+      {project: 'FE-Ferraz de Vasconcelos', monitor: 'Alberto'},
+      {project: 'FE-Francisco Morato', monitor: 'Alberto'},
+      {project: 'FE-Gov. Valadares', monitor: 'Alberto'},
+      {project: 'FE-Guaratinguetá', monitor: 'Alberto'},
+      {project: 'FE-Guarujá', monitor: 'Mateus'},
+      {project: 'FE-Itapecerica (V+S+P)', monitor: 'Mateus'},
+      {project: 'FE-Jacareí', monitor: 'Gabriel'},
+      {project: 'FE-Jaguariuna', monitor: 'Alberto'},
+      {project: 'FE-Limeira SPL', monitor: 'Gabriel'},
+      {project: 'FE-Osasco', monitor: 'Mateus'},
+      {project: 'FE-Praia Grande-SPL', monitor: 'Mateus'},
+      {project: 'FE-Ribeirão Pires', monitor: 'Alberto'},
+      {project: 'FE-Santa Barbara Doeste', monitor: 'Gabriel'},
+      {project: 'FE-Santa Isabel', monitor: 'Alberto'},
+      {project: 'FE-Santo Antonio do Pinhal', monitor: 'Alberto'},
+      {project: 'FE-São Sebastião', monitor: 'Mateus'},
+      {project: 'FE-Suzano', monitor: 'Alberto'},
+      {project: 'FE-Valinhos', monitor: 'Gabriel'},
+      {project: 'FE-Vinhedo SPL', monitor: 'Gabriel'}
+    ];
+
+    const colors = {};
+    const palette = ['#00FF00','#FF0000','#0000EE','#b2f7b2','#8bd3ff','#d9b3ff','#a7f3d0','#ffe6a7'];
+
+    function assignColors(monitors){
+      monitors.forEach((m,i)=> colors[m]=palette[i%palette.length]);
+    }
+
+    function unique(arr){return [...new Set(arr)]}
+
+    // Initialise UI
+    const filterMonitor = document.getElementById('filterMonitor');
+    const view = document.getElementById('view');
+    const search = document.getElementById('search');
+    const toggleView = document.getElementById('toggleView');
+    const exportCSV = document.getElementById('exportCSV');
+
+    function build(){
+      const monitors = unique(data.map(d=>d.monitor)).sort();
+      assignColors(monitors);
+
+      // populate filter and legend
+      filterMonitor.innerHTML = '<option value="">Filtrar por monitor — Todos</option>' + monitors.map(m=>`<option value="${m}">${m}</option>`).join('');
+
+      const legend = document.getElementById('legend');
+      legend.innerHTML = monitors.map(m=>`<div class="item"><span class="color-box" style="background:${colors[m]}"></span><div style="font-size:13px">${m}</div></div>`).join('');
+
+      // stats
+      document.getElementById('statTotal').innerText = data.length;
+      document.getElementById('statMonitors').innerText = monitors.length;
+      const counts = monitors.map(m=>({m, c: data.filter(d=>d.monitor===m).length})).sort((a,b)=>b.c-a.c);
+      document.getElementById('statTopMonitor').innerText = counts.length? counts[0].m + ' ('+counts[0].c+')' : '-';
+      document.getElementById('total-info').innerText = `Projetos: ${data.length} • Monitores: ${monitors.length}`;
+
+      render(data);
+    }
+
+    function render(list){
+      const q = search.value.trim().toLowerCase();
+      const filter = filterMonitor.value;
+      let filtered = list.filter(item=>{
+        const matchesQ = !q || item.project.toLowerCase().includes(q) || item.monitor.toLowerCase().includes(q);
+        const matchesFilter = !filter || item.monitor===filter;
+        return matchesQ && matchesFilter;
+      });
+
+      // display
+      const isList = document.body.classList.contains('list-view');
+      if(isList){
+        view.innerHTML = filtered.map(item=>`<div class="list-item"><div><div style="font-weight:600">${item.project}</div><div class="monitor">${item.monitor}</div></div><div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:4px;background:${colors[item.monitor]}"></div></div></div>`).join('');
+      } else {
+        view.innerHTML = '<div class="grid">'+filtered.map(item=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div class="title">${item.project}</div><div style="display:flex;gap:8px;align-items:center"><div style="width:12px;height:12px;border-radius:4px;background:${colors[item.monitor]}"></div></div></div><div class="monitor">Monitor: ${item.monitor}</div></div>`).join('') + '</div>';
+      }
+
+    }
+
+    // Events
+    search.addEventListener('input',()=>render(data));
+    filterMonitor.addEventListener('change',()=>render(data));
+
+    toggleView.addEventListener('click',()=>{
+      document.body.classList.toggle('list-view');
+      toggleView.innerText = document.body.classList.contains('list-view') ? 'Alternar vizualização' : 'Alternar vizualização';
+      render(data);
+    });
+
+    exportCSV.addEventListener('click',()=>{
+      const rows = [['Projeto','Monitor'], ...data.map(d=>[d.project,d.monitor])];
+      const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'mapa_divisao_contratos.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // keyboard: press '/' to focus search
+    window.addEventListener('keydown',e=>{if(e.key==='/' && document.activeElement !== search){e.preventDefault();search.focus();}});
+
+    // init
+    build();
+  </script>
+</body>
+</html>
