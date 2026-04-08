@@ -4,189 +4,199 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mapa de Divisão de Contratos</title>
+
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#f9c74f}
-    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
-    body{margin:0;background:linear-gradient(180deg,#071020 0%, #0f1724 100%);color:#e6eef6;padding:28px}
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2}
+    *{box-sizing:border-box;font-family:Inter,system-ui}
+    body{margin:0;background:#0f1724;color:#e6eef6;padding:28px}
+
     .app{max-width:1100px;margin:0 auto}
-    header{display:flex;align-items:center;gap:18px;margin-bottom:18px}
-    h1{font-size:20px;margin:0}
-    .controls{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
-    .input,select,button{background:var(--card);border:1px solid rgba(255,255,255,0.04);color:inherit;padding:8px 10px;border-radius:8px}
-    .input{min-width:220px}
-    .btn-primary{background:linear-gradient(90deg,#2e8de4,#7bb8ff);color:#032036;border:none}
-    .meta{margin-left:auto;color:var(--muted);font-size:13px}
-    .legend{display:flex;gap:8px;align-items:center}
-    .legend .item{display:flex;gap:8px;align-items:center;padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:8px}
-    .color-box{width:14px;height:14px;border-radius:4px}
-    main{margin-top:18px}
-    .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-    .stat{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:10px;border-radius:8px;min-width:140px}
+
+    header{display:flex;align-items:center;margin-bottom:20px}
+    h1{margin:0}
+    .meta{margin-left:auto;color:var(--muted)}
+
+    .controls{display:flex;gap:10px;margin-bottom:15px}
+    .input,select{background:#0b1220;border:1px solid rgba(255,255,255,0.05);color:#fff;padding:8px;border-radius:8px}
+
+    .stats{display:flex;gap:10px;margin:15px 0}
+    .stat{background:#0b1220;padding:10px;border-radius:8px}
+
+    canvas{display:block;margin:20px auto}
+
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:8px}
-    .card .title{font-weight:600}
-    .card .monitor{font-size:13px;color:var(--muted)}
-    .toolbar{display:flex;gap:8px;align-items:center}
-    .small{font-size:12px;padding:6px 8px}
-    .list-view .grid{display:block}
-    .list-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);margin-bottom:8px}
-    footer{margin-top:18px;color:var(--muted);font-size:13px}
-    @media (max-width:560px){.controls{flex-direction:column}.meta{margin-left:0}}
+
+    .card{
+      background:#0b1220;
+      border-radius:10px;
+      padding:12px;
+      border-left:6px solid #fff;
+    }
+
+    .title{font-weight:bold}
+    .monitor{font-size:13px;color:#aaa}
   </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <div>
-        <h1>Mapa de Divisão de Contratos</h1>
-        <div style="color:var(--muted);font-size:13px">Visualização interativa dos projetos e seus monitores</div>
-      </div>
 
-      <div class="meta" id="total-info">Projetos: 0 • Monitores: 0</div>
-    </header>
+<div class="app">
 
-    <section class="controls">
-      <input id="search" class="input" placeholder="Pesquisar projeto ou monitor (ex: Amparo)" />
+<header>
+  <h1>Mapa de Divisão</h1>
+  <div class="meta" id="total-info"></div>
+</header>
 
-      <select id="filterMonitor" class="input small">
-        <option value="">Todos</option>
-      </select>
+<div class="controls">
+  <input id="search" class="input" placeholder="Pesquisar">
+  
+  <select id="filterMonitor" class="input">
+    <option value="">Todos</option>
+  </select>
+</div>
 
-      <div class="toolbar">
-        <button id="toggleView" class="input small">Alternar vizualização</button>
-        <button id="exportCSV" class="input small btn-primary">Exportar CSV</button>
-      </div>
+<div class="stats">
+  <div class="stat">Projetos: <strong id="statTotal"></strong></div>
+  <div class="stat">Monitores: <strong id="statMonitors"></strong></div>
+  <div class="stat">Top: <strong id="statTop"></strong></div>
+</div>
 
-      <div style="margin-left:auto" class="legend" id="legend"></div>
-    </section>
+<canvas id="pieChart" width="400" height="400"></canvas>
 
-    <main>
-      <div class="stats">
-        <div class="stat">Projetos totais: <strong id="statTotal">0</strong></div>
-        <div class="stat">Monitores únicos: <strong id="statMonitors">0</strong></div>
-        <div class="stat">Maior monitor (projetos): <strong id="statTopMonitor">-</strong></div>
-      </div>
+<div id="view" class="grid"></div>
 
-      <div id="view" class="grid"></div>
+</div>
 
-    </main>
+<script>
+const data = [
+  {project:'FE-Amparo',monitor:'Gabriel'},
+  {project:'FE-Arujá',monitor:'Vilfredo'},
+  {project:'FE-Bertioga',monitor:'Vilfredo'},
+  {project:'FE-Boituva',monitor:'Vilfredo'},
+  {project:'FE-Cajamar',monitor:'Gabriel'},
+  {project:'FE-Cordeirópolis',monitor:'Gabriel'},
+  {project:'FE-Cubatão',monitor:'Mateus'},
+  {project:'FE-Diadema',monitor:'Mateus'},
+  {project:'FE-EMBU',monitor:'Mateus'},
+  {project:'FE-Ferraz de Vasconcelos',monitor:'Vilfredo'},
+  {project:'FE-Francisco Morato',monitor:'Vilfredo'},
+  {project:'FE-Gov. Valadares',monitor:'Vilfredo'},
+  {project:'FE-Guaratinguetá',monitor:'Vilfredo'},
+  {project:'FE-Guarujá',monitor:'Mateus'},
+  {project:'FE-Itapecerica',monitor:'Mateus'},
+  {project:'FE-Jacareí',monitor:'Gabriel'},
+  {project:'FE-Jaguariuna',monitor:'Vilfredo'},
+  {project:'FE-Limeira',monitor:'Gabriel'},
+  {project:'FE-Valinhos',monitor:'Gabriel'},
+  {project:'FE-Vinhedo',monitor:'Gabriel'},
+  {project:'FE-Osasco',monitor:'Mateus'},
+  {project:'FE-Praia Grande',monitor:'Mateus'},
+  {project:'FE-Santa Bárbara',monitor:'Gabriel'},
+  {project:'FE-Suzano',monitor:'Vilfredo'},
+  {project:'FE-Ribeirão Pires',monitor:'Vilfredo'},
+  {project:'FE-Santa Isabel',monitor:'Vilfredo'},
+  {project:'FE-São Sebastião',monitor:'Mateus'},
+  {project:'FE-Santo Antônio dos Pinhais',monitor:'Vilfredo'},
+];
 
-    <footer>
-      Dicas: use a pesquisa para localizar rapidamente. Filtre por monitor para ver seus projetos. Exporte para CSV quando precisar compartilhar.
-    </footer>
-  </div>
+const colors = {};
+const palette = ['#00FF00','#FF0000','#0000EE'];
 
-  <script>
-    const data = [
-      {project: 'FE-Amparo', monitor: 'Gabriel'},
-      {project: 'FE-Arujá', monitor: 'Vilfredo'},
-      {project: 'FE-Bertioga', monitor: 'Vilfredo'},
-      {project: 'FE-Boituva', monitor: 'Vilfredo'},
-      {project: 'FE-Cajamar', monitor: 'Gabriel'},
-      {project: 'FE-Cordeirópolis', monitor: 'Gabriel'},
-      {project: 'FE-Cubatão', monitor: 'Mateus'},
-      {project: 'FE-Diadema', monitor: 'Mateus'},
-      {project: 'FE-EMBU', monitor: 'Mateus'},
-      {project: 'FE-Ferraz de Vasconcelos', monitor: 'Vilfredo'},
-      {project: 'FE-Francisco Morato', monitor: 'Vilfredo'},
-      {project: 'FE-Gov. Valadares', monitor: 'Vilfredo'},
-      {project: 'FE-Guaratinguetá', monitor: 'Vilfredo'},
-      {project: 'FE-Guarujá', monitor: 'Mateus'},
-      {project: 'FE-Itapecerica (V+S+P)', monitor: 'Mateus'},
-      {project: 'FE-Jacareí', monitor: 'Gabriel'},
-      {project: 'FE-Jaguariuna', monitor: 'Vilfredo'},
-      {project: 'FE-Limeira SPL', monitor: 'Gabriel'},
-      {project: 'FE-Osasco', monitor: 'Mateus'},
-      {project: 'FE-Praia Grande-SPL', monitor: 'Mateus'},
-      {project: 'FE-Ribeirão Pires', monitor: 'Vilfredo'},
-      {project: 'FE-Santa Barbara Doeste', monitor: 'Gabriel'},
-      {project: 'FE-Santa Isabel', monitor: 'Vilfredo'},
-      {project: 'FE-Santo Antonio do Pinhal', monitor: 'Vilfredo'},
-      {project: 'FE-São Sebastião', monitor: 'Mateus'},
-      {project: 'FE-Suzano', monitor: 'Vilfredo'},
-      {project: 'FE-Valinhos', monitor: 'Gabriel'},
-      {project: 'FE-Vinhedo SPL', monitor: 'Gabriel'}
-    ];
+function unique(arr){return [...new Set(arr)]}
 
-    const colors = {};
-    const palette = ['#00FF00','#FF0000','#0000EE','#b2f7b2','#8bd3ff','#d9b3ff','#a7f3d0','#ffe6a7'];
+function build(){
+  const monitors = unique(data.map(d=>d.monitor));
 
-    function assignColors(monitors){
-      monitors.forEach((m,i)=> colors[m]=palette[i%palette.length]);
-    }
+  monitors.forEach((m,i)=>colors[m]=palette[i]);
 
-    function unique(arr){return [...new Set(arr)]}
+  // preencher filtro
+  const filter = document.getElementById('filterMonitor');
+  filter.innerHTML = '<option value="">Todos</option>' + monitors.map(m=>`<option value="${m}">${m}</option>`).join('');
 
-    // Initialise UI
-    const filterMonitor = document.getElementById('filterMonitor');
-    const view = document.getElementById('view');
-    const search = document.getElementById('search');
-    const toggleView = document.getElementById('toggleView');
-    const exportCSV = document.getElementById('exportCSV');
+  updateStats(data);
+  drawPie(data);
+  render(data);
+}
 
-    function build(){
-      const monitors = unique(data.map(d=>d.monitor)).sort();
-      assignColors(monitors);
+function updateStats(list){
+  const monitors = unique(list.map(d=>d.monitor));
 
-      // populate filter and legend
-      filterMonitor.innerHTML = '<option value="">Filtrar por monitor — Todos</option>' + monitors.map(m=>`<option value="${m}">${m}</option>`).join('');
+  document.getElementById('statTotal').innerText = list.length;
+  document.getElementById('statMonitors').innerText = monitors.length;
 
-      const legend = document.getElementById('legend');
-      legend.innerHTML = monitors.map(m=>`<div class="item"><span class="color-box" style="background:${colors[m]}"></span><div style="font-size:13px">${m}</div></div>`).join('');
+  const counts = monitors.map(m=>({
+    m,
+    c: list.filter(d=>d.monitor===m).length
+  })).sort((a,b)=>b.c-a.c);
 
-      // stats
-      document.getElementById('statTotal').innerText = data.length;
-      document.getElementById('statMonitors').innerText = monitors.length;
-      const counts = monitors.map(m=>({m, c: data.filter(d=>d.monitor===m).length})).sort((a,b)=>b.c-a.c);
-      document.getElementById('statTopMonitor').innerText = counts.length? counts[0].m + ' ('+counts[0].c+')' : '-';
-      document.getElementById('total-info').innerText = `Projetos: ${data.length} • Monitores: ${monitors.length}`;
+  document.getElementById('statTop').innerText = counts.length ? counts[0].m + " ("+counts[0].c+")" : '-';
+  document.getElementById('total-info').innerText = `Projetos: ${list.length} | Monitores: ${monitors.length}`;
+}
 
-      render(data);
-    }
+function drawPie(list){
+  const canvas = document.getElementById('pieChart');
+  const ctx = canvas.getContext('2d');
 
-    function render(list){
-      const q = search.value.trim().toLowerCase();
-      const filter = filterMonitor.value;
-      let filtered = list.filter(item=>{
-        const matchesQ = !q || item.project.toLowerCase().includes(q) || item.monitor.toLowerCase().includes(q);
-        const matchesFilter = !filter || item.monitor===filter;
-        return matchesQ && matchesFilter;
-      });
+  ctx.clearRect(0,0,400,400);
 
-      // display
-      const isList = document.body.classList.contains('list-view');
-      if(isList){
-        view.innerHTML = filtered.map(item=>`<div class="list-item"><div><div style="font-weight:600">${item.project}</div><div class="monitor">${item.monitor}</div></div><div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:4px;background:${colors[item.monitor]}"></div></div></div>`).join('');
-      } else {
-        view.innerHTML = '<div class="grid">'+filtered.map(item=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div class="title">${item.project}</div><div style="display:flex;gap:8px;align-items:center"><div style="width:12px;height:12px;border-radius:4px;background:${colors[item.monitor]}"></div></div></div><div class="monitor">Monitor: ${item.monitor}</div></div>`).join('') + '</div>';
-      }
+  const monitors = unique(list.map(d=>d.monitor));
+  const counts = monitors.map(m=>list.filter(d=>d.monitor===m).length);
+  const total = counts.reduce((a,b)=>a+b,0);
 
-    }
+  let start=0;
 
-    // Events
-    search.addEventListener('input',()=>render(data));
-    filterMonitor.addEventListener('change',()=>render(data));
+  monitors.forEach((m,i)=>{
+    const slice = (counts[i]/total)*2*Math.PI;
 
-    toggleView.addEventListener('click',()=>{
-      document.body.classList.toggle('list-view');
-      toggleView.innerText = document.body.classList.contains('list-view') ? 'Alternar vizualização' : 'Alternar vizualização';
-      render(data);
-    });
+    ctx.beginPath();
+    ctx.moveTo(200,200);
+    ctx.arc(200,200,150,start,start+slice);
+    ctx.fillStyle = colors[m];
+    ctx.fill();
 
-    exportCSV.addEventListener('click',()=>{
-      const rows = [['Projeto','Monitor'], ...data.map(d=>[d.project,d.monitor])];
-      const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'mapa_divisao_contratos.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    });
+    // TEXTO PRETO
+    const mid = start + slice/2;
+    const x = 200 + Math.cos(mid)*100;
+    const y = 200 + Math.sin(mid)*100;
 
-    // keyboard: press '/' to focus search
-    window.addEventListener('keydown',e=>{if(e.key==='/' && document.activeElement !== search){e.preventDefault();search.focus();}});
+    ctx.fillStyle = "#000";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(`${m} (${counts[i]})`, x, y);
 
-    // init
-    build();
-  </script>
+    start+=slice;
+  });
+}
+
+function render(list){
+  const view = document.getElementById('view');
+
+  view.innerHTML = list.map(d=>`
+    <div class="card" style="border-left:6px solid ${colors[d.monitor]}">
+      <div class="title">${d.project}</div>
+      <div class="monitor">${d.monitor}</div>
+    </div>
+  `).join('');
+}
+
+function applyFilters(){
+  const q = document.getElementById('search').value.toLowerCase();
+  const f = document.getElementById('filterMonitor').value;
+
+  const filtered = data.filter(d=>{
+    return (!q || d.project.toLowerCase().includes(q) || d.monitor.toLowerCase().includes(q)) &&
+           (!f || d.monitor===f);
+  });
+
+  updateStats(filtered);
+  drawPie(filtered);
+  render(filtered);
+}
+
+document.getElementById('search').addEventListener('input',applyFilters);
+document.getElementById('filterMonitor').addEventListener('change',applyFilters);
+
+build();
+</script>
+
 </body>
 </html>
